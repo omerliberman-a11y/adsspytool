@@ -16,10 +16,12 @@ scrape_app = typer.Typer(no_args_is_help=True, help="Run platform scrapers")
 ads_app = typer.Typer(no_args_is_help=True, help="Query stored ads")
 queue_app = typer.Typer(no_args_is_help=True, help="Inspect / drive the task queue")
 analyze_app = typer.Typer(no_args_is_help=True, help="AI analysis + embeddings")
+competitor_app = typer.Typer(no_args_is_help=True, help="Tracked competitors (by domain)")
 app.add_typer(scrape_app, name="scrape")
 app.add_typer(ads_app, name="ads")
 app.add_typer(queue_app, name="queue")
 app.add_typer(analyze_app, name="ai")
+app.add_typer(competitor_app, name="competitor")
 
 
 @app.callback()
@@ -189,6 +191,73 @@ def ai_rip_off_scan_cmd() -> None:
 
     n = scan_for_rip_offs()
     typer.echo(f"cross-advertiser clusters: {n}")
+
+
+# ---- competitor ----
+@competitor_app.command("add")
+def competitor_add_cmd(
+    domain: Annotated[str, typer.Argument(help="Competitor root domain (e.g. armra.com)")],
+    name: Annotated[str | None, typer.Option(help="Friendly name")] = None,
+    tag: Annotated[list[str], typer.Option("--tag", help="Tag (repeatable)")] = [],
+    enrich: Annotated[bool, typer.Option(help="Enqueue enrich task immediately")] = True,
+) -> None:
+    from adspy.queue.enqueue import enqueue
+    from adspy.services.competitor import create_competitor
+
+    cid = create_competitor(domain, name=name, tags=tag or None)
+    typer.echo(f"competitor_id={cid} domain={domain}")
+    if enrich:
+        tid = enqueue("enrich_competitor", {"competitor_id": cid}, priority=40)
+        typer.echo(f"  enrich task: {tid}")
+
+
+@competitor_app.command("list")
+def competitor_list_cmd() -> None:
+    from sqlalchemy import func
+
+    from adspy.models.competitor import Competitor
+
+    with session_scope() as s:
+        rows = list(s.scalars(select(Competitor).order_by(Competitor.created_at.desc())))
+        counts = dict(
+            s.execute(
+                select(Ad.competitor_id, func.count())
+                .where(Ad.competitor_id.is_not(None))
+                .group_by(Ad.competitor_id)
+            ).all()
+        )
+
+    if not rows:
+        typer.echo("(no competitors)")
+        return
+    for c in rows:
+        n = counts.get(c.id, 0)
+        tech = ",".join(c.tech_stack or []) or "-"
+        typer.echo(
+            f"#{c.id:<3} {c.domain:<25} fb={c.fb_page_id or '-':<18} "
+            f"ads={n:<4} tech={tech[:40]}"
+        )
+
+
+@competitor_app.command("enrich")
+def competitor_enrich_cmd(
+    competitor_id: Annotated[int, typer.Argument(help="Competitor id")],
+) -> None:
+    from adspy.services.competitor import enrich_competitor
+
+    enrich_competitor(competitor_id)
+    typer.echo(f"enriched competitor_id={competitor_id}")
+
+
+@competitor_app.command("scan")
+def competitor_scan_cmd(
+    competitor_id: Annotated[int, typer.Argument(help="Competitor id")],
+    limit: Annotated[int, typer.Option(help="Max ads to scrape")] = 200,
+) -> None:
+    from adspy.services.competitor import scan_competitor
+
+    n = scan_competitor(competitor_id, limit=limit)
+    typer.echo(f"scanned competitor_id={competitor_id}, upserted={n}")
 
 
 if __name__ == "__main__":

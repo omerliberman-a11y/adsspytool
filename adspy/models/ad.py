@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ARRAY, DateTime, Integer, PrimaryKeyConstraint, String, Text
+from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, PrimaryKeyConstraint, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,6 +47,10 @@ class Ad(Base):
 
     winner_score: Mapped[int | None] = mapped_column(Integer, index=True)
     rising_star_score: Mapped[int | None] = mapped_column(Integer, index=True)
+
+    competitor_id: Mapped[int | None] = mapped_column(
+        ForeignKey("competitors.id", ondelete="SET NULL"), index=True
+    )
 
     hook_type: Mapped[str | None] = mapped_column(String(32), index=True)
     awareness_stage: Mapped[int | None] = mapped_column(Integer)

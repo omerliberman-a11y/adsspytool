@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from adspy.api.routes import admin, ads, scrape, similar, stats, tasks
+from adspy.api.routes import admin, ads, competitors, scrape, similar, stats, tasks
 from adspy.config import get_settings
 from adspy.utils.logging import configure_logging
 
@@ -35,6 +35,7 @@ app.include_router(stats.router)
 app.include_router(tasks.router)
 app.include_router(similar.router)
 app.include_router(admin.router)
+app.include_router(competitors.router)
 
 
 @app.get("/health")

@@ -11,6 +11,7 @@ from adspy.normalize.llm_fallback import recover as llm_recover
 from adspy.queue.enqueue import enqueue
 from adspy.scrapers.base import ScrapeQuery
 from adspy.scrapers.meta import MetaScraper
+from adspy.services.competitor import auto_link_ad_to_competitor
 from adspy.utils.errors import NormalizerError
 from adspy.utils.logging import get_logger
 
@@ -42,6 +43,7 @@ def ingest_meta(query: ScrapeQuery, *, enqueue_followups: bool = True) -> Ingest
         else:
             normalized += 1
         ad["winner_score"] = score_ad_row(ad)
+        ad["competitor_id"] = auto_link_ad_to_competitor(ad)
         ad["updated_at"] = datetime.now(UTC)
         rows.append(ad)
 

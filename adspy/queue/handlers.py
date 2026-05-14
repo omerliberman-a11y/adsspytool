@@ -69,3 +69,17 @@ def rip_off_scan_handler(payload: dict[str, Any]) -> None:
     from adspy.services.rip_off import scan_for_rip_offs
 
     scan_for_rip_offs()
+
+
+@register_handler("enrich_competitor")
+def enrich_competitor_handler(payload: dict[str, Any]) -> None:
+    from adspy.services.competitor import enrich_competitor
+
+    enrich_competitor(int(payload["competitor_id"]))
+
+
+@register_handler("scan_competitor")
+def scan_competitor_handler(payload: dict[str, Any]) -> None:
+    from adspy.services.competitor import scan_competitor
+
+    scan_competitor(int(payload["competitor_id"]), limit=int(payload.get("limit", 200)))
