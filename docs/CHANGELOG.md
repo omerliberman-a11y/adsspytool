@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.0.4] - 2026-05-14 — Public demo (Cloudflare tunnel) + real images in seed
+
+Cloudflare Quick Tunnel exposes the local dashboard publicly at a
+`*.trycloudflare.com` URL. Single tunnel serves both pages and API: client-side
+fetches now use `/api/*` which Next.js proxies to the backend.
+
+Start a fresh tunnel:
+```
+./scripts/bin/cloudflared.exe tunnel --url http://localhost:3001
+```
+
+### Seed images
+- `scripts/seed_demo.py` now embeds real image URLs via `picsum.photos` with
+  stable per-niche seeds — dashboard renders actual images instead of "no media".
+- Seed upsert is now selective: only overwrites columns the seed explicitly sets,
+  preserving AI/embedding fields populated by the pipeline across re-seeds.
+- `creative_type=video` rows render as `image` since seed has no real MP4s.
+
+### Dashboard refactor
+- `dashboard/src/lib/api.ts` exports `CLIENT_API_BASE = "/api"`.
+- `/queue`, `/scrape`, `/competitors` client-side fetches refactored.
+- SSR pages still use `process.env.NEXT_PUBLIC_API_BASE` directly (works because
+  Next.js server is on the same machine as the API).
+
+### Verified
+- 22 ads re-analyzed via Groq + 22 image-embedded via OpenCLIP.
+- AI summaries now reference rendered image content (Gemini vision):
+  e.g. "By using a soft-focus, contemplative image, the ad creates an emotional
+  connection with the viewer".
+
 ## [1.0.3] - 2026-05-14 — Cloud AI live-verified (Groq + Gemini wired)
 
 User provided real `GROQ_API_KEY` + `GEMINI_API_KEY` (Meta Graph token pending `facebook.com/ID` verification, async).

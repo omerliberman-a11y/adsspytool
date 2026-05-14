@@ -38,3 +38,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Local-only binaries (cloudflared, etc.)
+scripts/bin/

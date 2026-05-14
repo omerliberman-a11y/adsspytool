@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
+import { CLIENT_API_BASE } from "@/lib/api";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const API = CLIENT_API_BASE;
 
 export default function ScrapePage() {
   const [keyword, setKeyword] = useState("");

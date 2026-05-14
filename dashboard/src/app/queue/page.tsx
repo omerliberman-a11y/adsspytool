@@ -1,13 +1,11 @@
 "use client";
 import useSWR from "swr";
-import { fetcher } from "@/lib/api";
+import { CLIENT_API_BASE, fetcher } from "@/lib/api";
 import type { Task } from "@/lib/api";
-
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 export default function QueuePage() {
   const { data, error, isLoading } = useSWR<{ count: number; items: Task[] }>(
-    `${API}/tasks?limit=50`,
+    `${CLIENT_API_BASE}/tasks?limit=50`,
     fetcher,
     { refreshInterval: 3000 },
   );

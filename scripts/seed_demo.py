@@ -156,6 +156,20 @@ REACH_BANDS = [None, None, "10000-50000", "50000-100000", "100000-500000", "5000
 SHARED_PHASH = "ff00ff00ff00ff00"  # all 16 hex chars
 
 
+def _picsum_media(niche: str, seq: int, creative_type: str) -> list[str]:
+    """Stable real-image URLs per ad. Carousels get 3, video/image get 1.
+
+    Picsum supports seeded random — same seed always returns the same photo.
+    Real photos = real pixels = pHashes get computed = image embeddings get computed.
+    """
+    if creative_type == "carousel":
+        return [
+            f"https://picsum.photos/seed/adspy-{niche}-{seq}-{i}/640/640.jpg"
+            for i in range(3)
+        ]
+    return [f"https://picsum.photos/seed/adspy-{niche}-{seq}/640/640.jpg"]
+
+
 def build_records() -> list[dict]:
     rows: list[dict] = []
     seq = 0
@@ -170,6 +184,13 @@ def build_records() -> list[dict]:
                 countries = random.choice(COUNTRIES_POOLS)
                 reach_band = random.choice(REACH_BANDS)
 
+                # Seed doesn't have real video files — render video as image so the
+                # dashboard shows a still. Real Meta scrapes replace this.
+                display_type = "image" if ctype == "video" else ctype
+                media = None if display_type == "text" else _picsum_media(
+                    niche["name"], seq, display_type
+                )
+
                 row = {
                     "platform": "meta",
                     "ad_id": ad_id,
@@ -182,16 +203,17 @@ def build_records() -> list[dict]:
                     "countries": countries,
                     "languages": ["en"],
                     "placements": placements,
-                    "creative_type": ctype,
+                    "creative_type": display_type,
+                    "media_urls": media,
                     "headline": headline,
                     "primary_text": body,
                     "description": None,
-                    "cta_text": "Learn More" if ctype != "video" else "Shop Now",
+                    "cta_text": "Learn More",
                     "cta_url": None,
                     "landing_url": f"https://www.facebook.com/ads/library/?id={ad_id}",
                     "variant_count": variants,
                     "reach_band": reach_band,
-                    "raw_json": {"seed": True, "niche": niche["name"]},
+                    "raw_json": {"seed": True, "niche": niche["name"], "original_creative_type": ctype},
                     "updated_at": now_utc(),
                 }
                 row["winner_score"] = score_ad_row(row)
@@ -210,12 +232,15 @@ def main() -> int:
     rows[2]["media_phash"] = [SHARED_PHASH]  # different advertiser, same niche
     rows[7]["media_phash"] = ["aabbccddeeff0011"]  # singleton (no rip-off)
 
+    # Only overwrite columns the seed explicitly sets — preserve AI fields,
+    # embeddings, and competitor_id populated by the live pipeline.
+    seeded_keys = set(rows[0].keys())
     with session_scope() as s:
         stmt = insert(Ad).values(rows)
         update_cols = {
             c.name: getattr(stmt.excluded, c.name)
             for c in Ad.__table__.columns
-            if c.name not in ("platform", "ad_id", "created_at")
+            if c.name in seeded_keys and c.name not in ("platform", "ad_id", "created_at")
         }
         stmt = stmt.on_conflict_do_update(
             index_elements=["platform", "ad_id"], set_=update_cols

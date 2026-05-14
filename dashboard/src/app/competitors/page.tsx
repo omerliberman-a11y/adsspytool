@@ -2,9 +2,9 @@
 import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import Link from "next/link";
-import { fetcher } from "@/lib/api";
+import { CLIENT_API_BASE, fetcher } from "@/lib/api";
 
-const API = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const API = CLIENT_API_BASE;
 
 type Competitor = {
   id: number;

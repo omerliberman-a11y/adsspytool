@@ -61,6 +61,17 @@ export type Task = {
   created_at: string;
 };
 
+/**
+ * Browser-side API base. Client-side fetches use `/api/*` so they hit the same
+ * origin as the dashboard, which Next.js rewrites to the backend (see
+ * `next.config.ts`). This lets a single Cloudflare/ngrok tunnel serve both
+ * pages and API publicly without exposing the backend port separately.
+ *
+ * Server-side renders (in `page.tsx` server components) still hit the backend
+ * directly via `process.env.NEXT_PUBLIC_API_BASE`.
+ */
+export const CLIENT_API_BASE = "/api";
+
 export const fetcher = async <T,>(url: string): Promise<T> => {
   const r = await fetch(url, { cache: "no-store" });
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
