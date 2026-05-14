@@ -1,5 +1,15 @@
 from adspy.models.ad import Ad
-from adspy.models.apify_run import ApifyRun
+from adspy.models.ad_history import AdHistory
+from adspy.models.ai_call import AICall
 from adspy.models.base import Base
+from adspy.models.normalization_failure import NormalizationFailure
+from adspy.models.scrape_run import ScrapeRun
 
-__all__ = ["Ad", "ApifyRun", "Base"]
+__all__ = [
+    "Ad",
+    "AdHistory",
+    "AICall",
+    "Base",
+    "NormalizationFailure",
+    "ScrapeRun",
+]

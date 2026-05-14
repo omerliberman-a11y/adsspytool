@@ -48,6 +48,7 @@ def scrape_meta_cmd(
     typer.echo(
         f"fetched={result.fetched} "
         f"normalized={result.normalized} "
+        f"recovered={result.recovered} "
         f"upserted={result.upserted} "
         f"errors={result.errors}"
     )

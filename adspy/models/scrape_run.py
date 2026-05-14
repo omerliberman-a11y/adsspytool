@@ -8,18 +8,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 from adspy.models.base import Base
 
 
-class ApifyRun(Base):
-    __tablename__ = "apify_runs"
+class ScrapeRun(Base):
+    __tablename__ = "scrape_runs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    source: Mapped[str] = mapped_column(String(64), nullable=False)
     platform: Mapped[str] = mapped_column(String(32), nullable=False)
-    run_id: Mapped[str | None] = mapped_column(String(128), index=True)
-    dataset_id: Mapped[str | None] = mapped_column(String(128))
+    query_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
-    input_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-
     cost_usd: Mapped[float | None] = mapped_column(Float)
     duration_secs: Mapped[float | None] = mapped_column(Float)
     item_count: Mapped[int | None] = mapped_column(Integer)

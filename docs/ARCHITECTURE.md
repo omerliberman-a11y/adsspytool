@@ -1,4 +1,4 @@
-# Architecture
+# Architecture (zero-cost edition)
 
 See [CLAUDE.md](../CLAUDE.md) for the schema, scoring formula, and conventions. This file is the visual + dependency reference.
 
@@ -6,61 +6,97 @@ See [CLAUDE.md](../CLAUDE.md) for the schema, scoring formula, and conventions. 
 
 ```
 ┌─────────────────────┐   ScrapeQuery     ┌──────────────────────┐
-│ CLI / API / worker  │ ───────────────►  │ adspy.scrapers/meta  │
+│ CLI / API / worker  │ ───────────────►  │ scrapers/meta        │
 └─────────────────────┘                   │ MetaScraper.scrape() │
                                           └──────────┬───────────┘
-                                                     │ ApifyRunner
+                                                     │
+                              wrap in ScrapeRunner ──┤  (records `scrape_runs` row)
+                                                     │
                                                      ▼
                                           ┌──────────────────────┐
-                                          │ Apify actor          │
-                                          │ apify/facebook-ads-* │
+                                          │ MetaGraphClient      │  HTTPS to graph.facebook.com
+                                          │ /ads_archive         │
                                           └──────────┬───────────┘
-                                                     │ dataset items (raw JSON)
-                                                     ▼
+                                                     │
+                                       (Phase 1)     │
+                            for fields the API hides ▼
                                           ┌──────────────────────┐
-                                          │ normalize_meta_ad    │ -> unified ad schema
+                                          │ snapshot_replay      │  Playwright capture once,
+                                          │                      │  httpx replay forever after
                                           └──────────┬───────────┘
                                                      │
                                                      ▼
                                           ┌──────────────────────┐
-                                          │ analyzers.scoring    │ -> winner_score
+                                          │ normalize/meta       │ → unified Ad schema
+                                          │   on failure ────────┼──► normalize/llm_fallback
+                                          │                      │     (Groq/Gemini/Ollama via AIRouter)
+                                          └──────────┬───────────┘     writes normalization_failures
+                                                     │
+                                                     ▼
+                                          ┌──────────────────────┐
+                                          │ analyzers/scoring    │ → winner_score (pure)
                                           └──────────┬───────────┘
                                                      │
                                                      ▼
                                           ┌──────────────────────┐
-                                          │ services.ingestion   │ -> upsert into Postgres
+                                          │ services/ingestion   │ → upsert into Postgres
                                           └──────────┬───────────┘
                                                      │
                                                      ▼
                                           ┌──────────────────────┐
-                                          │ FastAPI /ads         │ -> dashboard (Phase 4)
+                                          │ ai/router  (Phase 3) │ → ai_hook, ai_angle, ai_summary,
+                                          │ Gemini / Groq /      │   copy_embedding, image_embedding
+                                          │ CFWAI / Ollama       │   (cost-aware fallback chain)
+                                          └──────────┬───────────┘
+                                                     │
+                                                     ▼
+                                          ┌──────────────────────┐
+                                          │ FastAPI /ads         │ → dashboard (Phase 4)
                                           └──────────────────────┘
 ```
+
+## Process model
+
+- **API process** — `uvicorn adspy.api.app:app`. Reads. Stateless.
+- **Worker process** — `python -m adspy.queue.worker` (Phase 1.5). Pulls jobs from `task_queue` via `SELECT ... FOR UPDATE SKIP LOCKED`. No Redis, no Celery.
+- **CLI** — `adspy …`. Same code paths as worker; useful for manual runs.
+
+## Why Graph API (not third-party scrapers)
+
+1. **Free + official** — no per-1k-ad cost, no anti-bot dance, no scraper-churn maintenance.
+2. **More fields** — the public API exposes `eu_total_reach`, `delivery_by_region`, `demographic_distribution`, `estimated_audience_size` that most third-party scrapers don't surface.
+3. **Stability** — Meta maintains the API contract; third-party scrapers break every few months when Meta changes their internal markup.
+
+The trade-off: the Graph API returns `ad_snapshot_url` instead of direct media URLs. Phase 1 ships a Playwright-based snapshot-replay worker that resolves snapshot URLs to media in bulk, idempotently. Capture happens once (or per session rotation), replay happens for every ad.
+
+## Why an AI router (not a single provider)
+
+We're free-tier-bound, which means every provider has a hard daily ceiling. With four providers chained:
+
+```
+text:   groq (30/min, 14.4K/day) → gemini-flash (1.5K/day) → cfwai (10K neurons/day) → ollama (∞ local)
+vision: gemini-pro (1.5K/day) → gemini-flash → ollama (llama3.2-vision)
+embed:  local BGE → cfwai (free) → fallback to OpenCLIP local
+```
+
+…aggregate daily throughput comfortably exceeds 10K AI operations/day, which is more than the scraper layer can produce. The router records every call in `ai_calls` so we can see real consumption per provider per day and tune the chain.
 
 ## Dependency graph (allowed imports)
 
 ```
    api  ───►  services  ───►  scrapers  ───►  utils, config
     │             │
-    │             └─────►  analyzers  ───►  (pure: nothing)
+    │             ├─────►  normalize  ───►  ai (only llm_fallback)
+    │             │
+    │             ├─────►  analyzers  ───►  (pure: nothing)
+    │             │
+    │             ├─────►  ai          ───►  utils, config
     │             │
     │             └─────►  models  ───►  db
     │
     └─────────►  models  ───►  db
 ```
 
-Cycles are not allowed. If you find yourself needing one, the right answer is usually:
-- a DTO in `scrapers/base.py` (e.g., `ScrapeQuery`), or
-- a new helper in `utils/`.
-
-## Process model
-
-- **API process** — `uvicorn adspy.api.app:app` — reads. Stateless. Behind a single-user dashboard for now.
-- **Worker process** — `celery -A adspy.workers.app worker` — writes. Long Apify calls + AI calls go here, never inline in API handlers.
-- **CLI** — `adspy …` — same code paths as worker. Useful for manual scrapes during dev.
-
-## Why Apify (and not custom scrapers)
-
-The Meta Ad Library has aggressive anti-bot. Apify actors keep up with Meta's churn — paying ~\$1.50 per 1,000 ads is far cheaper than maintaining our own scraper. Cap per run via `APIFY_MAX_USD_PER_RUN` (default \$5).
-
-If/when we outgrow Apify on cost, the seam is `ApifyRunner`: replace it with a different transport that yields the same dataset shape, normalizers don't need to change.
+Cycles disallowed. If you find yourself needing one, the right answer is usually:
+- a DTO in `scrapers/base.py`, or
+- a helper in `utils/`.

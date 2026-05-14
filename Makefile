@@ -1,4 +1,4 @@
-.PHONY: up down install migrate revision api worker check lint type test clean
+.PHONY: up down install migrate revision api capture check lint type test clean
 
 up:
 	docker compose up -d
@@ -8,6 +8,7 @@ down:
 
 install:
 	poetry install
+	poetry run playwright install chromium
 
 migrate:
 	poetry run alembic upgrade head
@@ -18,8 +19,9 @@ revision:
 api:
 	poetry run uvicorn adspy.api.app:app --reload --port 8000
 
-worker:
-	poetry run celery -A adspy.workers.app worker --loglevel=info
+# Interactive Playwright session capture for non-Graph-API sources (X / TikTok / etc.).
+capture:
+	poetry run python -m adspy.scrapers.capture_replay capture --platform $(platform)
 
 check: lint type test
 

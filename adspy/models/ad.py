@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import ARRAY, DateTime, Integer, PrimaryKeyConstraint, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -29,6 +30,7 @@ class Ad(Base):
 
     creative_type: Mapped[str | None] = mapped_column(String(16))
     media_urls: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    media_phash: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)))
     local_media_paths: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
 
     headline: Mapped[str | None] = mapped_column(Text)
@@ -44,13 +46,20 @@ class Ad(Base):
     spend_band: Mapped[str | None] = mapped_column(String(64))
 
     winner_score: Mapped[int | None] = mapped_column(Integer, index=True)
+    rising_star_score: Mapped[int | None] = mapped_column(Integer, index=True)
+
+    hook_type: Mapped[str | None] = mapped_column(String(32), index=True)
+    awareness_stage: Mapped[int | None] = mapped_column(Integer)
+    copy_framework: Mapped[str | None] = mapped_column(String(32))
 
     ai_hook: Mapped[str | None] = mapped_column(Text)
     ai_angle: Mapped[str | None] = mapped_column(Text)
     ai_offer: Mapped[str | None] = mapped_column(Text)
-    ai_framework: Mapped[str | None] = mapped_column(String(64))
     ai_summary: Mapped[str | None] = mapped_column(Text)
     ai_rewritten_copy: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+
+    copy_embedding: Mapped[list[float] | None] = mapped_column(Vector(1024))
+    image_embedding: Mapped[list[float] | None] = mapped_column(Vector(768))
 
     raw_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
