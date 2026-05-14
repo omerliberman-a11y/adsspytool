@@ -41,12 +41,12 @@ make worker
 
 # Terminal 3 — Dashboard
 cd dashboard
-npm run dev             # http://localhost:3000
+npm run dev             # http://localhost:3001
 ```
 
 ## What you can do
 
-### From the dashboard (http://localhost:3000)
+### From the dashboard (http://localhost:3001)
 - **Winners** — card grid of every ad sorted by `winner_score`. Filter by platform / creative type / hook / country / min score / days active.
 - **Playbooks** — top 4 winners per hook archetype across the whole DB.
 - **Stats** — totals, AI-call consumption today (so you can see free-tier headroom), tasks by status.

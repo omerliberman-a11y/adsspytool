@@ -95,12 +95,12 @@ Everything is set up. Three things to run (each in its own terminal):
     npm run dev
 
 Then visit:
-  http://localhost:3000   — dashboard
+  http://localhost:3001   — dashboard
   http://localhost:8000/docs  — API docs
 
 To trigger a scrape, either:
   - hit POST http://localhost:8000/scrape/meta with a JSON body, or
-  - use the UI at http://localhost:3000/scrape
+  - use the UI at http://localhost:3001/scrape
 
 (Don't forget to fill META_GRAPH_TOKEN, GEMINI_API_KEY, GROQ_API_KEY in .env first.)
 "@ -ForegroundColor Green
