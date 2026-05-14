@@ -1,9 +1,10 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from adspy.api.routes import ads as ads_routes
+from adspy.api.routes import admin, ads, scrape, similar, stats, tasks
 from adspy.config import get_settings
 from adspy.utils.logging import configure_logging
 
@@ -15,8 +16,20 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="adspy", version="0.1.0", lifespan=lifespan)
-app.include_router(ads_routes.router)
+app = FastAPI(title="adspy", version="1.0.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(ads.router)
+app.include_router(scrape.router)
+app.include_router(stats.router)
+app.include_router(tasks.router)
+app.include_router(similar.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")

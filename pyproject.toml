@@ -33,6 +33,12 @@ ollama = "^0.4.0"                # local fallback
 # Media + hashing
 pillow = "^11.0.0"
 imagehash = "^4.3.1"             # pHash for media dedupe
+boto3 = "^1.35.0"                # Cloudflare R2 (S3-compatible)
+
+# Embeddings (local — no API cost)
+sentence-transformers = "^3.3.0"  # BGE-large for copy embeddings
+open-clip-torch = "^2.30.0"       # SigLIP / CLIP for image embeddings
+torch = "^2.5.0"                  # CPU build by default; user can swap to CUDA
 
 # CLI + UX
 typer = "^0.13.0"

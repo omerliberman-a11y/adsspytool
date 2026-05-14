@@ -8,6 +8,7 @@ from adspy.db.session import session_scope
 from adspy.models.ad import Ad
 from adspy.normalize import normalize_meta_ad
 from adspy.normalize.llm_fallback import recover as llm_recover
+from adspy.queue.enqueue import enqueue
 from adspy.scrapers.base import ScrapeQuery
 from adspy.scrapers.meta import MetaScraper
 from adspy.utils.errors import NormalizerError
@@ -26,7 +27,7 @@ class IngestionResult:
     errors: int
 
 
-def ingest_meta(query: ScrapeQuery) -> IngestionResult:
+def ingest_meta(query: ScrapeQuery, *, enqueue_followups: bool = True) -> IngestionResult:
     fetched = normalized = recovered = upserted = errors = 0
     rows: list[dict[str, object]] = []
 
@@ -36,9 +37,8 @@ def ingest_meta(query: ScrapeQuery) -> IngestionResult:
         if ad is None:
             errors += 1
             continue
-        if ad.get("_recovered"):
+        if ad.pop("_recovered", False):
             recovered += 1
-            ad.pop("_recovered", None)
         else:
             normalized += 1
         ad["winner_score"] = score_ad_row(ad)
@@ -58,6 +58,9 @@ def ingest_meta(query: ScrapeQuery) -> IngestionResult:
             )
             s.execute(stmt)
             upserted = len(rows)
+
+    if enqueue_followups and rows:
+        _enqueue_followups(rows)
 
     log.info(
         "meta_ingest_done",
@@ -87,3 +90,16 @@ def _normalize_with_fallback(raw: dict) -> dict | None:
             return None
         rescued["_recovered"] = True
         return rescued
+
+
+def _enqueue_followups(rows: list[dict[str, object]]) -> None:
+    """For each newly-ingested ad, enqueue the downstream pipeline tasks."""
+    for ad in rows:
+        ad_id = ad.get("ad_id")
+        snapshot_url = ad.get("landing_url")
+        if not isinstance(ad_id, str):
+            continue
+        if isinstance(snapshot_url, str) and not ad.get("media_urls"):
+            enqueue("snapshot_replay", {"ad_id": ad_id, "snapshot_url": snapshot_url}, priority=50)
+        enqueue("analyze_ad", {"platform": "meta", "ad_id": ad_id}, priority=80)
+        enqueue("embed_ad", {"platform": "meta", "ad_id": ad_id}, priority=90)

@@ -1,51 +1,54 @@
 # Changelog
 
-## [0.2.0] - 2026-05-14 — Zero-cost re-architecture
+## [1.0.0] - 2026-05-14 — Ready for office testing
 
-### Constraint
-Operating constraint changed to **$0 / month**. All paid SaaS removed.
+Complete end-to-end build: Phase 1 through Phase 5 + selected Phase 10 features. Free-tier only.
 
-### Removed
-- Apify and the `apify-client` dependency (replaced by Meta Graph API + Playwright capture-replay).
-- Celery + Redis (replaced by Postgres `FOR UPDATE SKIP LOCKED` queue, Phase 1.5).
-- `adspy/scrapers/apify_runner.py`, `adspy/models/apify_run.py`, the `apify_runs` table, `docs/apify_actors.md`.
+### Added — Backend
+- **Postgres task queue** (`adspy/queue/`) — `SELECT ... FOR UPDATE SKIP LOCKED`. Handler registry + worker loop. Replaces Celery + Redis entirely. Migration `0003` adds the `tasks` table.
+- **Snapshot-replay worker** (`adspy/scrapers/meta/snapshot_replay.py`) — Playwright headless, intercepts network XHRs + scrapes DOM images to extract media URLs the Graph API hides. Downloads to R2 (or local fs fallback), computes SHA-256 + pHash. Sets `creative_type` based on actual media.
+- **MediaStore** (`adspy/storage/`) — R2 client (S3-compatible, boto3) with local-filesystem fallback for no-config dev.
+- **Creative AI analysis** (`adspy/ai/analysis.py`) — for each ad, sends visual to Gemini (image/video), then structured extraction prompt to Groq → fills `hook_type`, `awareness_stage`, `copy_framework`, `ai_hook`, `ai_angle`, `ai_offer`, `ai_summary`, `ai_rewritten_copy[]`. Robust JSON parsing, value cleaning, and `ai_calls` logging per provider call.
+- **Embeddings** (`adspy/embeddings/`) — local BGE-large for copy (1024-d), local OpenCLIP ViT-L-14 for image (768-d). Models cache in-process after first load.
+- **Daily snapshot worker** (`adspy/services/daily_snapshot.py`) — writes one `ad_history` row per ad per day. Bootstrap for the temporal layer.
+- **Cross-advertiser rip-off detection** (`adspy/services/rip_off.py`) — pHash clustering with Hamming threshold 8 to flag visual rip-offs across advertisers.
+- **Ingestion auto-chains** — `services/ingestion.py` enqueues `snapshot_replay` + `analyze_ad` + `embed_ad` tasks for every new ad ingested.
+- **API completions**:
+  - `GET /stats` — totals, AI consumption, tasks by status, breakdowns.
+  - `POST /scrape/meta` — enqueue a scrape via API.
+  - `GET /tasks`, `GET /tasks/{id}` — live queue view.
+  - `GET /similar/{platform}/{ad_id}?by=copy|image` — pgvector cosine distance.
+  - `POST /admin/{score/recompute, analyze/batch, embed/batch, snapshot/batch, daily-snapshot, rip-off-scan}`.
+- **CLI extensions** (`adspy/cli/main.py`):
+  - `adspy queue {worker, status, enqueue}` — queue management.
+  - `adspy ai {analyze, embed, daily-snapshot, rip-off-scan}` — analysis batch ops.
+  - `adspy ads list --hook curiosity` — filter by hook type.
 
-### Added
-- `adspy/scrapers/meta/graph_client.py` — Meta Ad Library Graph API client with cursor pagination + retry.
-- `adspy/scrapers/scrape_runner.py` — generic `ScrapeRunner` context manager that writes one `scrape_runs` row per scrape (source-agnostic).
-- `adspy/scrapers/capture_replay.py` — base class for HAR-capture + httpx GraphQL/RPC replay (used by X / TikTok / Google / LinkedIn in later phases).
-- `adspy/ai/` — provider clients (Gemini AI Studio, Groq, Cloudflare Workers AI, Ollama) and a cost-aware `AIRouter` that falls through on rate-limit/outage.
-- `adspy/normalize/` — package for per-platform normalizers (decoupled from `scrapers/`).
-- `adspy/normalize/llm_fallback.py` — last-mile LLM normalizer that recovers unparseable records via the AI router and logs to `normalization_failures` for offline patching.
-- New tables: `scrape_runs`, `normalization_failures`, `ai_calls`, `ad_history`.
-- New ad fields: `media_phash`, `hook_type`, `awareness_stage`, `copy_framework`, `rising_star_score`, `copy_embedding` (pgvector 1024), `image_embedding` (pgvector 768).
-- `docs/free_data_sources.md` — endpoint catalog per platform.
-- `tests/test_ai_router.py` — offline tests for provider-selection logic.
+### Added — Frontend
+- **Next.js 15 dashboard** (`dashboard/`) — TypeScript, Tailwind, App Router.
+- Pages:
+  - `/` — winners card grid + filter bar (platform / creative / hook / score / days / country).
+  - `/ads/[platform]/[ad_id]` — detail view with hero media (auto-play on hover for video), AI hook, why-it-works, original copy, 3 rewritten variants, two "more like this" panels (by copy + by image), full metadata sidebar.
+  - `/playbooks` — top 4 winners per hook archetype.
+  - `/stats` — visual dashboard of platform/hook/creative breakdowns + AI consumption.
+  - `/queue` — live task-queue view with 3s refresh (SWR).
+  - `/scrape` — form to enqueue a new scrape from the UI.
+- Dark theme with semantic colors (good/warn/bad).
 
-### Changed
-- `adspy/normalize/meta.py` is the Graph-API-shaped normalizer; the old camelCase-aware version under `adspy/scrapers/meta/normalizer.py` is gone.
-- `Ad` model: added new columns above. Migration `0002` handles the upgrade.
-- `MetaScraper` now yields raw items directly (no more `(run, items)` tuple); the `ScrapeRunner` context manager writes the run record transparently.
-- `IngestionResult` has a `recovered` count (rows the classic normalizer couldn't parse but the LLM fallback rescued).
-- `docker-compose.yml`: dropped Redis (no Celery).
-- `Makefile`: added `make capture platform=<name>` for capture-replay session bootstrap; `make install` also runs `playwright install chromium`.
+### Added — Ops
+- **`scripts/bootstrap.ps1`** — one-shot setup. Verifies prereqs, installs Python + Playwright + Node deps, starts Postgres, migrates, prints next-step commands.
+- **CORS** on FastAPI for the Next.js dev server.
+- **Makefile**: `make worker` runs the queue worker; `make install` now runs `playwright install chromium`.
 
-### Free-tier budget map
-Documented in `docs/PLAN.md`. Soft caps in `Settings` (`SCRAPE_MAX_ITEMS_PER_RUN`, etc.) keep runs from accidentally bursting limits.
+### Schema
+- New: `tasks` table.
+- The Ad row gains real data in all the v0.2 columns (`media_phash`, `hook_type`, `awareness_stage`, `copy_framework`, `rising_star_score`, `copy_embedding`, `image_embedding`).
 
 ---
 
+## [0.2.0] - 2026-05-14 — Zero-cost re-architecture
+
+Operating constraint changed to $0/month. Removed Apify, Celery, Redis. Added Meta Graph API client, capture-replay base, AI provider package (Gemini/Groq/CFWAI/Ollama) with cost-aware router, last-mile LLM normalizer, four new tables (scrape_runs, normalization_failures, ai_calls, ad_history). See git history for full diff.
+
 ## [0.1.0] - 2026-05-13
-### Added
-- Phase 0 scaffold: repo layout, Poetry config, docker-compose (Postgres + pgvector, Redis), Makefile.
-- Unified ad schema + `Ad` and `ApifyRun` SQLAlchemy models.
-- Alembic with initial migration.
-- `ApifyRunner` with retry, cost cap, and run-record persistence.
-- Meta scraper + normalizer (defensive against camelCase/snake_case field drift).
-- Pure-function winner scoring with longevity / variant / reach / placement / recency components.
-- Ingestion service: scrape → normalize → score → upsert.
-- FastAPI app with `/health`, `/ads`, `/ads/{platform}/{ad_id}`.
-- Typer CLI: `adspy scrape meta` and `adspy ads list`.
-- Celery app + `scrape_meta` task.
-- Tests: scoring (full coverage of all components), meta normalizer.
-- Docs: `CLAUDE.md`, `PLAN.md`, `ARCHITECTURE.md`, `apify_actors.md`.
+Phase 0 scaffold: repo layout, Poetry, docker-compose, Alembic, unified Ad schema, pure-function scorer, FastAPI skeleton, Typer CLI, Apify-based Meta scraper (subsequently removed in 0.2).

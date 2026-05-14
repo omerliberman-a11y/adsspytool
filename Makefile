@@ -19,6 +19,9 @@ revision:
 api:
 	poetry run uvicorn adspy.api.app:app --reload --port 8000
 
+worker:
+	poetry run python -m adspy.queue.worker
+
 # Interactive Playwright session capture for non-Graph-API sources (X / TikTok / etc.).
 capture:
 	poetry run python -m adspy.scrapers.capture_replay capture --platform $(platform)
