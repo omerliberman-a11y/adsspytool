@@ -35,9 +35,15 @@ def _serialize(a: Ad) -> dict[str, Any]:
         "variant_count": a.variant_count,
         "reach_band": a.reach_band,
         "winner_score": a.winner_score,
+        "rising_star_score": a.rising_star_score,
+        "hook_type": a.hook_type,
+        "awareness_stage": a.awareness_stage,
+        "copy_framework": a.copy_framework,
         "ai_hook": a.ai_hook,
         "ai_angle": a.ai_angle,
+        "ai_offer": a.ai_offer,
         "ai_summary": a.ai_summary,
+        "ai_rewritten_copy": a.ai_rewritten_copy,
     }
 
 
