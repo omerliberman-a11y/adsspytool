@@ -54,6 +54,10 @@ def list_ads(
     days_active_gte: int | None = Query(default=None, ge=0),
     country: str | None = Query(default=None, min_length=2, max_length=8),
     creative_type: str | None = Query(default=None),
+    hook_type: str | None = Query(default=None),
+    awareness_stage: int | None = Query(default=None, ge=1, le=5),
+    copy_framework: str | None = Query(default=None),
+    advertiser_page_id: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
@@ -71,6 +75,14 @@ def list_ads(
         stmt = stmt.where(Ad.countries.any(country.upper()))
     if creative_type:
         stmt = stmt.where(Ad.creative_type == creative_type)
+    if hook_type:
+        stmt = stmt.where(Ad.hook_type == hook_type)
+    if awareness_stage is not None:
+        stmt = stmt.where(Ad.awareness_stage == awareness_stage)
+    if copy_framework:
+        stmt = stmt.where(Ad.copy_framework == copy_framework)
+    if advertiser_page_id:
+        stmt = stmt.where(Ad.advertiser_page_id == advertiser_page_id)
     stmt = stmt.order_by(Ad.winner_score.desc().nullslast()).limit(limit).offset(offset)
 
     with session_scope() as s:
