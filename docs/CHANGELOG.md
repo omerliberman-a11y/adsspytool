@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.0.2] - 2026-05-14 — Live verified end-to-end on the office machine
+
+System is up and serving with **22 fully-analyzed demo ads** populated entirely from local resources (no external API tokens used).
+
+### Live verification
+- All 38/38 pytest cases pass (scoring + meta normalizer + AI router).
+- Postgres running on :5434 (5433 was occupied), Next.js on :3001 (3000 was occupied).
+- Worker drained **43 tasks** (21 analyze + 22 embed) with `done` status.
+- AI analysis routed entirely through **Ollama** (`qwen2.5:14b`) with `LOCAL_ONLY=true` — 22 calls logged in `ai_calls`. Real hook-types extracted: `problem_agitation` (8), `contrarian` (5), `curiosity` (3), `before_after` (3), `transformation` (2), `authority` (1).
+- Copy embeddings via local BGE-large on all 22 ads, image embeddings skipped (no URLs).
+- `/similar/{platform}/{ad_id}?by=copy` returns real pgvector cosine distances — first cold-plunge anchor pulls 3 other cold-plunge ads as top-3 nearest neighbors.
+- Daily snapshot wrote 22 `ad_history` rows for 2026-05-14.
+- Rip-off scan found the 1 seeded cross-advertiser pHash cluster.
+- All 11 endpoints (6 API, 5 dashboard) return HTTP 200.
+
+### Fixes
+- API `/ads/{platform}/{ad_id}` serializer was missing `hook_type`, `awareness_stage`, `copy_framework`, `ai_offer`, `ai_rewritten_copy`, `rising_star_score`. Added.
+- `scripts/seed_demo.py` — 22 realistic ads across 7 niches, used for offline demo and dev.
+- `OLLAMA_TEXT_MODEL` default updated to match common install (`qwen2.5:14b`, no `-instruct` suffix in tag).
+- Pinned `typing-inspection`, `torchvision ^0.20` so Python 3.13 installs cleanly.
+
+---
+
+## [1.0.1] - 2026-05-14 — Runtime fixes from live-bringup
+
+- Postgres port 5433→5434 (collision), dashboard port 3000→3001 (collision).
+- FastAPI CORS allows both 3000 and 3001 origins.
+- `adspy/queue/__main__.py` — package entrypoint so `python -m adspy.queue` doesn't suffer the `__main__`/package double-namespace bug.
+- React 19-RC → 19 stable; Next 15.0.3 → 15.1+.
+
+---
+
 ## [1.0.0] - 2026-05-14 — Ready for office testing
 
 Complete end-to-end build: Phase 1 through Phase 5 + selected Phase 10 features. Free-tier only.
