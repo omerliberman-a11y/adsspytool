@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.3] - 2026-05-14 — Cloud AI live-verified (Groq + Gemini wired)
+
+User provided real `GROQ_API_KEY` + `GEMINI_API_KEY` (Meta Graph token pending `facebook.com/ID` verification, async).
+
+- `.env`: `LOCAL_ONLY=false` so the AI router uses cloud chains:
+  - `text`: `groq → gemini → cfwai → ollama`
+  - `image|video`: `gemini → ollama`
+- Re-analyzed all 22 seed ads via Groq (Llama 3.3 70B) — **22 calls, ~40s total** vs 4.5min via local Ollama (23× faster).
+- Output quality jumped: rewrites are more distinct, ai_hooks more incisive (e.g. `"Killing your dopamine"` for the 4am-club ad). Hook-type distribution gained `social_proof` that local Ollama hadn't surfaced.
+- 45 `ai_calls` rows logged (23 Groq + 22 Ollama from earlier run) — provider attribution working.
+
 ## [1.0.2] - 2026-05-14 — Live verified end-to-end on the office machine
 
 System is up and serving with **22 fully-analyzed demo ads** populated entirely from local resources (no external API tokens used).
