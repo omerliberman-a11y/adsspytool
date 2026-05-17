@@ -32,8 +32,29 @@ def scrape_meta_handler(payload: dict[str, Any]) -> None:
         recovered=result.recovered,
         errors=result.errors,
     )
-    # Chain: enqueue snapshot_replay + analysis tasks for the new ads.
-    # We do this from inside ingest_meta in a future iteration; for now just log.
+
+
+@register_handler("scrape_tiktok")
+def scrape_tiktok_handler(payload: dict[str, Any]) -> None:
+    from adspy.services.ingestion import ingest_tiktok
+
+    # TikTok Creative Center doesn't support keyword search via this endpoint —
+    # it surfaces top ads per (period, country). limit caps total items.
+    query = ScrapeQuery(
+        keyword="top",  # placeholder; TikTok scraper doesn't use it
+        countries=(payload.get("country", "US"),),
+        limit=int(payload.get("limit", 50)),
+    )
+    result = ingest_tiktok(
+        query,
+        period=int(payload.get("period", 30)),
+        country=str(payload.get("country", "US")),
+    )
+    log.info(
+        "scrape_tiktok_done",
+        upserted=result.upserted,
+        errors=result.errors,
+    )
 
 
 @register_handler("snapshot_replay")

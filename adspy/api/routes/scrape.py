@@ -27,3 +27,22 @@ def scrape_meta(req: ScrapeRequest) -> dict[str, Any]:
     }
     task_id = enqueue("scrape_meta", payload, priority=50)
     return {"task_id": task_id, "kind": "scrape_meta", "status": "queued"}
+
+
+class TikTokScrapeRequest(BaseModel):
+    country: str = Field(default="US", min_length=2, max_length=4)
+    period: int = Field(default=30, ge=7, le=120)  # 7, 30, or 120
+    limit: int = Field(default=50, ge=1, le=200)
+
+
+@router.post("/tiktok")
+def scrape_tiktok(req: TikTokScrapeRequest) -> dict[str, Any]:
+    # Snap period to one of TikTok's allowed values.
+    period = min((7, 30, 120), key=lambda v: abs(v - req.period))
+    payload = {
+        "country": req.country.upper(),
+        "period": period,
+        "limit": req.limit,
+    }
+    task_id = enqueue("scrape_tiktok", payload, priority=50)
+    return {"task_id": task_id, "kind": "scrape_tiktok", "status": "queued"}

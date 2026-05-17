@@ -62,6 +62,30 @@ def scrape_meta_cmd(
     )
 
 
+@scrape_app.command("tiktok")
+def scrape_tiktok_cmd(
+    country: Annotated[str, typer.Option(help="Country code")] = "US",
+    period: Annotated[int, typer.Option(help="Lookback period: 7, 30, or 120")] = 30,
+    limit: Annotated[int, typer.Option(help="Max ads to scrape")] = 50,
+    enqueue_followups: Annotated[
+        bool, typer.Option(help="Enqueue analyze/embed tasks for new ads")
+    ] = True,
+) -> None:
+    from adspy.services.ingestion import ingest_tiktok
+
+    period = min((7, 30, 120), key=lambda v: abs(v - period))
+    result = ingest_tiktok(
+        ScrapeQuery(limit=limit),
+        period=period,
+        country=country.upper(),
+        enqueue_followups=enqueue_followups,
+    )
+    typer.echo(
+        f"fetched={result.fetched} normalized={result.normalized} "
+        f"upserted={result.upserted} errors={result.errors}"
+    )
+
+
 # ---- ads ----
 @ads_app.command("list")
 def ads_list_cmd(

@@ -83,6 +83,8 @@ class MetaGraphClient:
 
     def search(self, query: ScrapeQuery) -> Iterator[dict[str, Any]]:
         """Yield raw ad records page-by-page, capped at settings.scrape_max_items_per_run."""
+        if not query.keyword and not query.advertiser_page:
+            raise ScrapeError("Meta scrape requires either keyword or advertiser_page")
         params: dict[str, Any] = {
             "ad_type": "ALL",
             "ad_active_status": "ACTIVE" if query.active_only else "ALL",
