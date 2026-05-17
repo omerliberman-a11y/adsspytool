@@ -120,3 +120,16 @@ def run_due_searches_handler(payload: dict[str, Any]) -> None:
 
     n = run_due_searches()
     log.info("scheduler_tick_done", kicked=n)
+
+
+@register_handler("google_at_discover")
+def google_at_discover_handler(payload: dict[str, Any]) -> None:
+    """Discover advertisers in Google Ads Transparency by keyword → competitors."""
+    from adspy.services.google_discovery import discover_into_competitors
+
+    discover_into_competitors(
+        keyword=str(payload["keyword"]),
+        limit=int(payload.get("limit", 20)),
+        region=int(payload.get("region", 1)),
+        min_ad_count=int(payload.get("min_ad_count", 5)),
+    )

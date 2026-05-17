@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from adspy.api.routes import (
     admin,
     ads,
+    chat,
     competitors,
     saved_searches,
     scrape,
@@ -48,6 +49,7 @@ app.include_router(admin.router)
 app.include_router(competitors.router)
 app.include_router(sources.router)
 app.include_router(saved_searches.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")

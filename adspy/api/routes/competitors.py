@@ -119,3 +119,30 @@ def delete_competitor(competitor_id: int) -> None:
         if c is None:
             raise HTTPException(status_code=404, detail="competitor not found")
         s.delete(c)
+
+
+class DiscoverRequest(BaseModel):
+    keyword: str = Field(min_length=2, max_length=100)
+    limit: int = Field(default=20, ge=1, le=50)
+    min_ad_count: int = Field(default=5, ge=0)
+    region: int = Field(default=1)
+
+
+@router.post("/discover/google")
+def discover_via_google(req: DiscoverRequest) -> dict[str, Any]:
+    """Surface Google Ads Transparency advertisers matching the keyword and
+    create Competitor rows for any not yet tracked.
+    """
+    from adspy.queue.enqueue import enqueue as enq
+
+    task_id = enq(
+        "google_at_discover",
+        {
+            "keyword": req.keyword,
+            "limit": req.limit,
+            "region": req.region,
+            "min_ad_count": req.min_ad_count,
+        },
+        priority=40,
+    )
+    return {"task_id": task_id, "keyword": req.keyword}
