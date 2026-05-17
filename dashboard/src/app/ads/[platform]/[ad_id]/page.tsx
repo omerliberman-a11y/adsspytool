@@ -125,11 +125,35 @@ export default async function AdPage({ params }: Props) {
           </Section>
         )}
 
+        <DestinationPanel ad={ad} />
+
         <SimilarBlock title="More like this — by copy" items={bycopy.items} />
         <SimilarBlock title="More like this — by image" items={byimage.items} />
       </div>
 
       <aside className="bg-panel border border-border rounded-lg p-4 h-fit sticky top-20 space-y-3 text-sm">
+        {ad.source_url && (
+          <a
+            href={ad.source_url}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-center px-3 py-2 rounded bg-accent text-white text-sm font-medium hover:opacity-90"
+          >
+            ▶ View ad on {platformLabel(ad.platform)}
+          </a>
+        )}
+        {ad.final_url && (
+          <a
+            href={ad.final_url}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-center px-3 py-2 rounded border border-border text-sm font-medium hover:border-accent"
+          >
+            ↗ Open product page
+          </a>
+        )}
+
+        <hr className="border-border" />
         <Row label="Hook type" v={ad.hook_type} />
         <Row label="Awareness stage" v={ad.awareness_stage} />
         <Row label="Copy framework" v={ad.copy_framework} />
@@ -152,17 +176,7 @@ export default async function AdPage({ params }: Props) {
             rel="noreferrer"
             className="block text-accent text-sm mt-2"
           >
-            View advertiser →
-          </a>
-        )}
-        {ad.landing_url && (
-          <a
-            href={ad.landing_url}
-            target="_blank"
-            rel="noreferrer"
-            className="block text-accent text-sm"
-          >
-            Ad snapshot →
+            View advertiser page →
           </a>
         )}
       </aside>
@@ -177,6 +191,98 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </section>
   );
+}
+
+function platformLabel(p: string): string {
+  return {
+    meta: "Meta Ad Library",
+    tiktok: "TikTok",
+    x: "X",
+    google: "Google",
+    linkedin: "LinkedIn",
+  }[p] ?? p;
+}
+
+function DestinationPanel({ ad }: { ad: Ad }) {
+  if (!ad.link_chain || ad.link_chain.length === 0) {
+    if (!ad.cta_url && !ad.landing_url) {
+      return null;
+    }
+    return (
+      <Section title="Destination">
+        <div className="bg-panel border border-border rounded p-3 text-sm text-muted">
+          Not resolved yet. Click <code className="text-accent">/admin/ads/{ad.platform}/{ad.ad_id}/resolve-link</code> to enqueue.
+        </div>
+      </Section>
+    );
+  }
+  return (
+    <Section title="Destination">
+      <div className="bg-panel border border-border rounded-lg p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-muted">final →</span>
+            <span className="font-mono">{ad.final_domain}</span>
+            {ad.affiliate_network && (
+              <span className="px-2 py-0.5 rounded bg-warn/20 text-warn text-xs font-mono uppercase">
+                {ad.affiliate_network} affiliate
+              </span>
+            )}
+          </div>
+          {ad.final_url && (
+            <a
+              href={ad.final_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent text-sm"
+            >
+              Open ↗
+            </a>
+          )}
+        </div>
+
+        <div className="text-xs uppercase tracking-wider text-muted mb-2">
+          {ad.link_chain.length} hop{ad.link_chain.length === 1 ? "" : "s"}
+        </div>
+        <ol className="space-y-1.5 text-xs font-mono">
+          {ad.link_chain.map((h, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <span className="text-muted w-6 text-right">{h.index}</span>
+              <StatusBadge status={h.status} kind={h.kind} />
+              <span className="truncate text-ink">{h.host}</span>
+              {h.affiliate && (
+                <span className="px-1.5 py-0 rounded bg-warn/20 text-warn text-[10px] uppercase">
+                  {h.affiliate}
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+    </Section>
+  );
+}
+
+function StatusBadge({ status, kind }: { status: number | null; kind: string }) {
+  if (kind === "error") {
+    return <span className="px-1.5 rounded bg-bad/20 text-bad text-[10px]">ERR</span>;
+  }
+  if (kind === "meta_refresh") {
+    return <span className="px-1.5 rounded bg-accent/20 text-accent text-[10px]">META</span>;
+  }
+  if (kind === "js") {
+    return <span className="px-1.5 rounded bg-accent/20 text-accent text-[10px]">JS</span>;
+  }
+  if (status === null) {
+    return <span className="px-1.5 rounded bg-muted/20 text-muted text-[10px]">—</span>;
+  }
+  const color =
+    status >= 200 && status < 300
+      ? "bg-good/20 text-good"
+      : status >= 300 && status < 400
+        ? "bg-warn/20 text-warn"
+        : "bg-bad/20 text-bad";
+  return <span className={`px-1.5 rounded text-[10px] ${color}`}>{status}</span>;
 }
 
 function Row({ label, v }: { label: string; v: unknown }) {

@@ -44,6 +44,12 @@ def _serialize(a: Ad) -> dict[str, Any]:
         "ai_offer": a.ai_offer,
         "ai_summary": a.ai_summary,
         "ai_rewritten_copy": a.ai_rewritten_copy,
+        "source_url": a.source_url,
+        "link_chain": a.link_chain,
+        "final_url": a.final_url,
+        "final_domain": a.final_domain,
+        "affiliate_network": a.affiliate_network,
+        "link_resolved_at": a.link_resolved_at.isoformat() if a.link_resolved_at else None,
     }
 
 

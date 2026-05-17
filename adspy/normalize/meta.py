@@ -95,6 +95,7 @@ def normalize_meta_ad(raw: dict[str, Any]) -> dict[str, Any]:
         "advertiser_url": (
             f"https://www.facebook.com/{raw['page_id']}" if raw.get("page_id") else None
         ),
+        "source_url": snapshot_url,  # FB Ad Library — where to view the ad
         "first_seen": first_seen,
         "last_seen": last_seen,
         "days_active": days_active,

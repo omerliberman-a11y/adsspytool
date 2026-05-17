@@ -104,3 +104,10 @@ def scan_competitor_handler(payload: dict[str, Any]) -> None:
     from adspy.services.competitor import scan_competitor
 
     scan_competitor(int(payload["competitor_id"]), limit=int(payload.get("limit", 200)))
+
+
+@register_handler("resolve_link")
+def resolve_link_handler(payload: dict[str, Any]) -> None:
+    from adspy.services.link_resolver import resolve_for_ad
+
+    resolve_for_ad(platform=payload["platform"], ad_id=payload["ad_id"])

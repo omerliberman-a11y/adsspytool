@@ -107,6 +107,10 @@ def _enqueue_followups(rows: list[dict[str, object]]) -> None:
             enqueue("snapshot_replay", {"ad_id": ad_id, "snapshot_url": snapshot_url}, priority=50)
         enqueue("analyze_ad", {"platform": platform, "ad_id": ad_id}, priority=80)
         enqueue("embed_ad", {"platform": platform, "ad_id": ad_id}, priority=90)
+        # If we have a real destination URL (not an ad-library snapshot), resolve it.
+        cta = ad.get("cta_url") or ad.get("landing_url")
+        if isinstance(cta, str) and "ads/library" not in cta and "library.tiktok" not in cta:
+            enqueue("resolve_link", {"platform": platform, "ad_id": ad_id}, priority=70)
 
 
 def ingest_tiktok(

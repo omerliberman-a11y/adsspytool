@@ -70,6 +70,9 @@ def normalize_tiktok_ad(raw: dict[str, Any]) -> dict[str, Any]:
         "advertiser_name": brand,
         "advertiser_page_id": None,
         "advertiser_url": None,
+        # Canonical TikTok Ad Library URL. Sometimes "data not found" (Creative
+        # Center top ads aren't all archived), but always a valid link to try.
+        "source_url": f"https://library.tiktok.com/ads/detail/?ad_id={ad_id}",
         "first_seen": first_seen,
         "last_seen": last_seen,
         "days_active": period_days,  # ad was active within the scraped window

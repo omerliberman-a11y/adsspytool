@@ -52,6 +52,15 @@ class Ad(Base):
         ForeignKey("competitors.id", ondelete="SET NULL"), index=True
     )
 
+    # Platform-native viewing URL (FB Ad Library / TikTok Ad Library / etc.)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    # Resolved destination chain — array of hops, last is the final landing page.
+    link_chain: Mapped[Any | None] = mapped_column(JSONB)
+    final_url: Mapped[str | None] = mapped_column(Text)
+    final_domain: Mapped[str | None] = mapped_column(String(255), index=True)
+    affiliate_network: Mapped[str | None] = mapped_column(String(64), index=True)
+    link_resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     hook_type: Mapped[str | None] = mapped_column(String(32), index=True)
     awareness_stage: Mapped[int | None] = mapped_column(Integer)
     copy_framework: Mapped[str | None] = mapped_column(String(32))

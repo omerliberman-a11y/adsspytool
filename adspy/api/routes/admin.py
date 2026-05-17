@@ -109,3 +109,36 @@ def trigger_daily_snapshot() -> dict[str, Any]:
 def trigger_rip_off_scan() -> dict[str, Any]:
     task_id = enqueue("rip_off_scan", {}, priority=30)
     return {"task_id": task_id}
+
+
+@router.post("/resolve-links/batch")
+def trigger_resolve_links_batch(limit: int = 100) -> dict[str, Any]:
+    """Enqueue resolve_link for ads with a cta_url/landing_url but no chain yet."""
+    n = 0
+    with session_scope() as s:
+        rows = list(
+            s.execute(
+                select(Ad.platform, Ad.ad_id, Ad.cta_url, Ad.landing_url)
+                .where(Ad.link_resolved_at.is_(None))
+                .where(
+                    (Ad.cta_url.is_not(None))
+                    | (
+                        Ad.landing_url.is_not(None)
+                        & ~Ad.landing_url.like("%ads/library%")
+                        & ~Ad.landing_url.like("%library.tiktok%")
+                    )
+                )
+                .limit(limit)
+            )
+        )
+    for platform, ad_id, _cta, _land in rows:
+        enqueue("resolve_link", {"platform": platform, "ad_id": ad_id}, priority=70)
+        n += 1
+    return {"enqueued": n}
+
+
+@router.post("/ads/{platform}/{ad_id}/resolve-link")
+def trigger_resolve_link_for_ad(platform: str, ad_id: str) -> dict[str, Any]:
+    """Manually trigger link resolution for a single ad."""
+    task_id = enqueue("resolve_link", {"platform": platform, "ad_id": ad_id}, priority=70)
+    return {"task_id": task_id}

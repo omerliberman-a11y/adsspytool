@@ -29,6 +29,21 @@ export type Ad = {
   ai_offer: string | null;
   ai_summary: string | null;
   ai_rewritten_copy: string[] | null;
+  source_url: string | null;
+  link_chain: LinkHop[] | null;
+  final_url: string | null;
+  final_domain: string | null;
+  affiliate_network: string | null;
+  link_resolved_at: string | null;
+};
+
+export type LinkHop = {
+  index: number;
+  url: string;
+  host: string;
+  status: number | null;
+  kind: string;
+  affiliate: string | null;
 };
 
 export type AdListResp = { count: number; items: Ad[] };
