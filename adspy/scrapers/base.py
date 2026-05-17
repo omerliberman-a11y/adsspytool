@@ -12,5 +12,6 @@ class ScrapeQuery:
     keyword: str | None = None
     advertiser_page: str | None = None
     countries: tuple[str, ...] = field(default_factory=tuple)
+    publisher_platforms: tuple[str, ...] = field(default_factory=tuple)
     active_only: bool = True
     limit: int = 200

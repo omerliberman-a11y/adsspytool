@@ -97,6 +97,11 @@ class MetaGraphClient:
             params["search_terms"] = query.keyword
         if query.advertiser_page:
             params["search_page_ids"] = _bracket([query.advertiser_page])
+        if query.publisher_platforms:
+            # e.g. ["INSTAGRAM"] or ["FACEBOOK","INSTAGRAM"]. Graph API expects uppercase.
+            params["publisher_platforms"] = _bracket(
+                [p.upper() for p in query.publisher_platforms]
+            )
 
         emitted = 0
         cap = self.settings.scrape_max_items_per_run

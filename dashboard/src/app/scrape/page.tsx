@@ -13,6 +13,7 @@ export default function ScrapePage() {
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState("");
   const [active, setActive] = useState(true);
+  const [metaSurfaces, setMetaSurfaces] = useState<string[]>([]);  // [] = all surfaces
 
   // shared
   const [country, setCountry] = useState("US");
@@ -37,6 +38,7 @@ export default function ScrapePage() {
           keyword: keyword || null,
           advertiser_page: page || null,
           countries: country ? [country.toUpperCase()] : [],
+          publisher_platforms: metaSurfaces,
           active_only: active,
           limit,
         };
@@ -108,6 +110,35 @@ export default function ScrapePage() {
                 placeholder="numeric Facebook page id"
                 className="w-full bg-bg border border-border rounded px-3 py-2"
               />
+            </Row>
+            <Row label="Surfaces (empty = all)">
+              <div className="flex flex-wrap gap-2">
+                {(["facebook", "instagram", "messenger", "threads", "audience_network"] as const).map(
+                  (s) => {
+                    const on = metaSurfaces.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() =>
+                          setMetaSurfaces(
+                            on
+                              ? metaSurfaces.filter((x) => x !== s)
+                              : [...metaSurfaces, s],
+                          )
+                        }
+                        className={`text-xs px-2.5 py-1.5 rounded font-mono ${
+                          on
+                            ? "bg-accent text-white"
+                            : "bg-bg border border-border text-muted hover:text-ink"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
             </Row>
             <Row label="Active only">
               <input

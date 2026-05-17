@@ -12,6 +12,10 @@ class ScrapeRequest(BaseModel):
     keyword: str | None = None
     advertiser_page: str | None = None
     countries: list[str] = Field(default_factory=list)
+    publisher_platforms: list[str] = Field(
+        default_factory=list,
+        description="Scope to specific surfaces, e.g. ['instagram'], ['facebook','instagram']. Empty = all.",
+    )
     active_only: bool = True
     limit: int = Field(default=200, ge=1, le=2000)
 
@@ -22,11 +26,27 @@ def scrape_meta(req: ScrapeRequest) -> dict[str, Any]:
         "keyword": req.keyword,
         "advertiser_page": req.advertiser_page,
         "countries": req.countries,
+        "publisher_platforms": req.publisher_platforms,
         "active_only": req.active_only,
         "limit": req.limit,
     }
     task_id = enqueue("scrape_meta", payload, priority=50)
     return {"task_id": task_id, "kind": "scrape_meta", "status": "queued"}
+
+
+@router.post("/instagram")
+def scrape_instagram(req: ScrapeRequest) -> dict[str, Any]:
+    """Convenience wrapper for Meta scrape scoped to Instagram only."""
+    payload = {
+        "keyword": req.keyword,
+        "advertiser_page": req.advertiser_page,
+        "countries": req.countries,
+        "publisher_platforms": ["instagram"],
+        "active_only": req.active_only,
+        "limit": req.limit,
+    }
+    task_id = enqueue("scrape_meta", payload, priority=50)
+    return {"task_id": task_id, "kind": "scrape_meta", "platform_scope": "instagram"}
 
 
 class TikTokScrapeRequest(BaseModel):

@@ -17,8 +17,10 @@ order.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
+from adspy.config import get_settings
 from adspy.scrapers.base import ScrapeQuery
 from adspy.scrapers.scrape_runner import ScrapeRunner
 from adspy.utils.errors import ScrapeError
@@ -30,6 +32,16 @@ UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 )
+
+
+def _session_state_path() -> Path:
+    """Path to the optional saved Playwright storage_state for an authenticated TikTok session.
+
+    Captured via `python -m adspy.scrapers.tiktok.capture_session`. If present,
+    the scraper loads it before opening pages — unlocking industry-filtered
+    Creative Center views, saved searches, and (anecdotally) higher rate limits.
+    """
+    return Path(get_settings().session_store_dir) / "tiktok-state.json"
 
 
 class TikTokScraper:
@@ -69,10 +81,16 @@ class TikTokScraper:
         max_pages = max(1, (max_items + page_size - 1) // page_size)
         emitted = 0
 
+        state_path = _session_state_path()
+        context_kwargs: dict[str, Any] = {"user_agent": UA, "locale": "en-US"}
+        if state_path.exists():
+            log.info("tiktok_using_captured_session", path=str(state_path))
+            context_kwargs["storage_state"] = str(state_path)
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             try:
-                ctx = browser.new_context(user_agent=UA, locale="en-US")
+                ctx = browser.new_context(**context_kwargs)
                 page = ctx.new_page()
 
                 # Wire one response handler that captures all top_ads pages we see.

@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 const PLATFORMS = ["", "meta", "x", "tiktok", "google", "linkedin"];
 const CREATIVE = ["", "video", "image", "carousel", "text"];
+const PLACEMENTS = ["", "facebook", "instagram", "messenger", "threads", "audience_network", "tiktok"];
 const HOOKS = [
   "",
   "curiosity",
@@ -53,6 +54,7 @@ export function FilterBar() {
   return (
     <div className="flex gap-3 items-end flex-wrap pb-4 border-b border-border mb-4">
       <Field label="Platform" name="platform" options={PLATFORMS} />
+      <Field label="Placement" name="placement" options={PLACEMENTS} />
       <Field label="Creative" name="creative_type" options={CREATIVE} />
       <Field label="Hook" name="hook" options={HOOKS} />
       <label className="flex flex-col gap-1 text-xs text-muted">

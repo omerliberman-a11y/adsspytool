@@ -22,6 +22,7 @@ def scrape_meta_handler(payload: dict[str, Any]) -> None:
         keyword=payload.get("keyword"),
         advertiser_page=payload.get("advertiser_page"),
         countries=tuple(payload.get("countries") or ()),
+        publisher_platforms=tuple(payload.get("publisher_platforms") or ()),
         active_only=payload.get("active_only", True),
         limit=int(payload.get("limit", 200)),
     )
@@ -31,6 +32,7 @@ def scrape_meta_handler(payload: dict[str, Any]) -> None:
         upserted=result.upserted,
         recovered=result.recovered,
         errors=result.errors,
+        platforms=list(query.publisher_platforms) or None,
     )
 
 

@@ -64,6 +64,11 @@ def list_ads(
     awareness_stage: int | None = Query(default=None, ge=1, le=5),
     copy_framework: str | None = Query(default=None),
     advertiser_page_id: str | None = Query(default=None),
+    placement: str | None = Query(
+        default=None,
+        description="Filter by a placement value, e.g. 'instagram', 'facebook', 'messenger', 'threads', 'tiktok'.",
+    ),
+    affiliate_network: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
@@ -89,6 +94,10 @@ def list_ads(
         stmt = stmt.where(Ad.copy_framework == copy_framework)
     if advertiser_page_id:
         stmt = stmt.where(Ad.advertiser_page_id == advertiser_page_id)
+    if placement:
+        stmt = stmt.where(Ad.placements.any(placement.lower()))
+    if affiliate_network:
+        stmt = stmt.where(Ad.affiliate_network == affiliate_network)
     stmt = stmt.order_by(Ad.winner_score.desc().nullslast()).limit(limit).offset(offset)
 
     with session_scope() as s:
