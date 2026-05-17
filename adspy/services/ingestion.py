@@ -48,6 +48,8 @@ def ingest_meta(query: ScrapeQuery, *, enqueue_followups: bool = True) -> Ingest
         ad["updated_at"] = datetime.now(UTC)
         rows.append(ad)
 
+    rows = _dedupe_rows(rows)
+
     if rows:
         with session_scope() as s:
             stmt = insert(Ad).values(rows)
@@ -81,6 +83,19 @@ def ingest_meta(query: ScrapeQuery, *, enqueue_followups: bool = True) -> Ingest
         upserted=upserted,
         errors=errors,
     )
+
+
+def _dedupe_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Drop duplicates by (platform, ad_id), keeping the last occurrence.
+
+    Postgres ON CONFLICT cannot affect the same row twice in one INSERT, so
+    paginated scrapes that surface the same ad on adjacent pages would crash.
+    """
+    seen: dict[tuple[str, str], dict[str, object]] = {}
+    for r in rows:
+        key = (str(r.get("platform")), str(r.get("ad_id")))
+        seen[key] = r  # last wins
+    return list(seen.values())
 
 
 def _normalize_with_fallback(raw: dict) -> dict | None:
@@ -137,6 +152,10 @@ def ingest_tiktok(
         ad["competitor_id"] = auto_link_ad_to_competitor(ad)
         ad["updated_at"] = datetime.now(UTC)
         rows.append(ad)
+
+    # TikTok pagination can return the same ad_id twice on adjacent pages.
+    # Postgres ON CONFLICT can't touch the same row twice in one statement.
+    rows = _dedupe_rows(rows)
 
     if rows:
         with session_scope() as s:

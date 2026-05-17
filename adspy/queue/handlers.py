@@ -111,3 +111,12 @@ def resolve_link_handler(payload: dict[str, Any]) -> None:
     from adspy.services.link_resolver import resolve_for_ad
 
     resolve_for_ad(platform=payload["platform"], ad_id=payload["ad_id"])
+
+
+@register_handler("run_due_searches")
+def run_due_searches_handler(payload: dict[str, Any]) -> None:
+    """Scheduler tick — enqueue all saved searches whose next_run_at has passed."""
+    from adspy.services.scheduler import run_due_searches
+
+    n = run_due_searches()
+    log.info("scheduler_tick_done", kicked=n)

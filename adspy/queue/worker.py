@@ -52,13 +52,29 @@ class Worker:
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)
         log.info("worker_started", handlers=sorted(_REGISTRY.keys()))
+        last_scheduler_tick = 0.0
+        scheduler_interval = 60.0  # seconds between saved-search scans
         while not self._stop:
+            # Periodic in-process scheduler — fires due saved_searches.
+            now = time.monotonic()
+            if now - last_scheduler_tick > scheduler_interval:
+                last_scheduler_tick = now
+                self._tick_scheduler()
             task = self._claim_next()
             if task is None:
                 time.sleep(self.poll_interval)
                 continue
             self._dispatch(task)
         log.info("worker_stopped")
+
+    @staticmethod
+    def _tick_scheduler() -> None:
+        try:
+            from adspy.services.scheduler import run_due_searches
+
+            run_due_searches()
+        except Exception as exc:  # noqa: BLE001
+            log.error("scheduler_tick_failed", error=str(exc))
 
     def _claim_next(self) -> Task | None:
         with session_scope() as s:
